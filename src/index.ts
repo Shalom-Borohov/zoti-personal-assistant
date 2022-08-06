@@ -1,5 +1,7 @@
 import { Boom } from "@hapi/boom";
 import makeWASocket, {
+  AnyMessageContent,
+  delay,
   DisconnectReason,
   fetchLatestBaileysVersion,
   makeInMemoryStore,
@@ -53,6 +55,17 @@ const startSock = async () => {
 
   store?.bind(sock.ev);
 
+  const sendMessageWTyping = async (msg: AnyMessageContent, jid: string) => {
+    await sock.presenceSubscribe(jid);
+    await delay(500);
+
+    await sock.sendPresenceUpdate("composing", jid);
+    await delay(2000);
+
+    await sock.sendPresenceUpdate("paused", jid);
+
+    await sock.sendMessage(jid, msg);
+  };
   // the process function lets you process all events that just occurred
   // efficiently in a batch
   sock.ev.process(
@@ -106,6 +119,25 @@ const startSock = async () => {
         console.log(
           `recv ${contacts.length} contacts (is latest: ${isLatest})`
         );
+      }
+
+      // received a new message
+      if (events["messages.upsert"]) {
+        const upsert = events["messages.upsert"];
+        console.log("recv messages ", JSON.stringify(upsert, undefined, 2));
+
+        if (upsert.type === "notify") {
+          for (const msg of upsert.messages) {
+            if (!msg.key.fromMe && doReplies) {
+              console.log("replying to", msg.key.remoteJid);
+              await sock!.readMessages([msg.key]);
+              await sendMessageWTyping(
+                { text: "Hello there!" },
+                msg.key.remoteJid!
+              );
+            }
+          }
+        }
       }
 
       // messages updated like status delivered, message deleted etc.
