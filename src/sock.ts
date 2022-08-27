@@ -1,7 +1,5 @@
 import { Boom } from "@hapi/boom";
 import makeWASocket, {
-  AnyMessageContent,
-  delay,
   DisconnectReason,
   fetchLatestBaileysVersion,
   makeInMemoryStore,
@@ -9,6 +7,7 @@ import makeWASocket, {
   useMultiFileAuthState,
 } from "@adiwajshing/baileys";
 import MAIN_LOGGER from "./MAIN_LOGGER";
+import { upsert } from "./events/messages/upsert";
 
 const logger = MAIN_LOGGER.child({});
 logger.level = "trace";
@@ -55,17 +54,6 @@ export const startSock = async () => {
 
   store?.bind(sock.ev);
 
-  const sendMessageWTyping = async (msg: AnyMessageContent, jid: string) => {
-    await sock.presenceSubscribe(jid);
-    await delay(500);
-
-    await sock.sendPresenceUpdate("composing", jid);
-    await delay(2000);
-
-    await sock.sendPresenceUpdate("paused", jid);
-
-    await sock.sendMessage(jid, msg);
-  };
   // the process function lets you process all events that just occurred
   // efficiently in a batch
   sock.ev.process(
@@ -74,7 +62,6 @@ export const startSock = async () => {
       // something about the connection changed
       // maybe it closed, or we received all offline message or connection opened
       if (events["connection.update"]) {
-        console.log(events["connection.update"].qr);
         const update = events["connection.update"];
         const { connection, lastDisconnect } = update;
         if (connection === "close") {
@@ -123,48 +110,22 @@ export const startSock = async () => {
       }
 
       // received a new message
-      if (events["messages.upsert"]) {
-        const upsert = events["messages.upsert"];
-        console.log("recv messages ", JSON.stringify(upsert, undefined, 2));
-
-        if (upsert.type === "notify") {
-          for (const msg of upsert.messages) {
-            if (!msg.key.fromMe && doReplies) {
-              console.log("replying to", msg.key.remoteJid);
-              await sock!.readMessages([msg.key]);
-              await sendMessageWTyping(
-                { text: "Hello there!" },
-                msg.key.remoteJid!
-              );
-            }
-          }
-        }
-      }
+      events["messages.upsert"] && (await upsert(sock, events, doReplies));
 
       // messages updated like status delivered, message deleted etc.
-      if (events["messages.update"]) {
-        console.log(events["messages.update"]);
-      }
+      if (events["messages.update"]) console.log(events["messages.update"]);
 
-      if (events["message-receipt.update"]) {
+      if (events["message-receipt.update"])
         console.log(events["message-receipt.update"]);
-      }
 
-      if (events["messages.reaction"]) {
-        console.log(events["messages.reaction"]);
-      }
+      if (events["messages.reaction"]) console.log(events["messages.reaction"]);
 
-      if (events["presence.update"]) {
-        console.log(events["presence.update"]);
-      }
+      if (events["presence.update"]) console.log(events["presence.update"]);
 
-      if (events["chats.update"]) {
-        console.log(events["chats.update"]);
-      }
+      if (events["chats.update"]) console.log(events["chats.update"]);
 
-      if (events["chats.delete"]) {
+      if (events["chats.delete"])
         console.log("chats deleted ", events["chats.delete"]);
-      }
     }
   );
 
