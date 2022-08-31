@@ -14,10 +14,6 @@ export const putUserOutOfHelpMode = (id: string): void => {
   users[id].isHelpMode = false;
 };
 
-export const isUserExists = (id: string): boolean => {
-  return !!users[id];
-};
+export const isUserExists = (id: string): boolean => !!users[id];
 
-export const isUserInHelpMode = (id: string): boolean => {
-  return users[id].isHelpMode;
-};
+export const isUserInHelpMode = (id: string): boolean => users[id].isHelpMode;
