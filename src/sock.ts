@@ -1,16 +1,16 @@
-import { Boom } from "@hapi/boom";
 import makeWASocket, {
-  DisconnectReason,
   fetchLatestBaileysVersion,
   makeInMemoryStore,
   MessageRetryMap,
   useMultiFileAuthState,
 } from "@adiwajshing/baileys";
 import MAIN_LOGGER from "./MAIN_LOGGER";
-import { upsert } from "./events/messages/upsert";
+import { upsertMessages } from "./events/messages/upsert";
+import { updateConnection } from "./events/connection/update";
 
-const logger = MAIN_LOGGER.child({});
-logger.level = "trace";
+const logger = undefined;
+// const logger = MAIN_LOGGER.child({});
+// logger.level = "trace";
 const useStore = !process.argv.includes("--no-store");
 const doReplies = !process.argv.includes("--no-reply");
 
@@ -22,6 +22,7 @@ const msgRetryCounterMap: MessageRetryMap = {};
 // can be written out to a file & read from it
 const store = useStore ? makeInMemoryStore({ logger }) : undefined;
 store?.readFromFile("./baileys_store_multi.json");
+
 // save every 10s
 setInterval(() => {
   store?.writeToFile("./baileys_store_multi.json");
@@ -36,7 +37,7 @@ export const startSock = async () => {
 
   const sock = makeWASocket({
     version,
-    logger,
+    // logger,
     printQRInTerminal: true,
     auth: state,
     msgRetryCounterMap,
@@ -61,32 +62,12 @@ export const startSock = async () => {
     async (events) => {
       // something about the connection changed
       // maybe it closed, or we received all offline message or connection opened
-      if (events["connection.update"]) {
-        const update = events["connection.update"];
-        const { connection, lastDisconnect } = update;
-        if (connection === "close") {
-          // reconnect if not logged out
-          if (
-            (lastDisconnect?.error as Boom)?.output?.statusCode !==
-            DisconnectReason.loggedOut
-          ) {
-            startSock();
-          } else {
-            console.log("Connection closed. You are logged out.");
-          }
-        }
-
-        console.log("connection update", update);
-      }
+      if (events["connection.update"]) updateConnection(events);
 
       // credentials updated -- save them
-      if (events["creds.update"]) {
-        await saveCreds();
-      }
+      if (events["creds.update"]) await saveCreds();
 
-      if (events.call) {
-        console.log("recv call event", events.call);
-      }
+      if (events.call) console.log("recv call event", events.call);
 
       // chat history received
       if (events["chats.set"]) {
@@ -110,7 +91,8 @@ export const startSock = async () => {
       }
 
       // received a new message
-      events["messages.upsert"] && (await upsert(sock, events, doReplies));
+      if (events["messages.upsert"])
+        await upsertMessages(sock, events, doReplies);
 
       // messages updated like status delivered, message deleted etc.
       if (events["messages.update"]) console.log(events["messages.update"]);
