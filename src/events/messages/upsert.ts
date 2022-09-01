@@ -4,9 +4,10 @@ import { Upsert } from "../../types/events";
 import { isDefined } from "../../utils/guards/type-guards";
 import { split } from "lodash/fp";
 import { sendMessageWTyping } from "../../Misc/send-msg-with-typing";
-import { setTimer, help } from "../../commands";
+import { setTimer, help, quote } from "../../commands";
 import { addUser, isUserExists, isUserInHelpMode } from "../../store/users";
 import { explain } from "../../commands/help";
+import { some, includes } from "lodash/fp";
 
 export const upsertMessages = async (
   sock: Sock,
@@ -34,6 +35,8 @@ export const upsertMessages = async (
           explain(sock, command, msg);
         } else if (command === "טיימר") {
           setTimer(sock, words, msg);
+        } else if (some(includes("ציטוט"), words)) {
+          quote(sock, msg);
         } else if (command === "עזרה") {
           help(sock, msg);
         } else {
