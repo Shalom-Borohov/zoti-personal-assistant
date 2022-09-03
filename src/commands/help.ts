@@ -11,7 +11,10 @@ export const help = async (sock: Sock, msg: IWebMessageInfo) => {
 
   const msgToSend: AnyMessageContent = {
     text: `בחרו את המספר עליו תרצו שאסביר: 
-    1. טיימר ⏲️`,
+1. ⏲️ טיימר
+2. 🤣 בדיחה
+3. 🗣 ציטוט
+4. ❓ עובדה`,
   };
 
   await sock!.readMessages([msg.key]);
@@ -29,7 +32,13 @@ export const explain = async (
 
   const optionsExplanation: Record<number, string> = {
     1: ` הקלד טיימר ולאחריו מספר דקות
-  לדוגמה: טיימר 10`,
+לדוגמה: טיימר 10`,
+    2: `הקלד משהו שמכיל את המילה בדיחה או מצחיק ואשלח בדיחה
+לדוגמה: שלחי לי משהו מצחיק`,
+    3: `הקלד משהו שמכיל את המילה ציטוט ואשלח ציטוט
+לדוגמה: איך בא לי איזה ציטוט טוב ככה`,
+    4: `הקלד משהו שמכיל את המילה עובדה ואשלח עובדה
+לדוגמה: תראי לי איזו שהיא עובדה מעניינת`,
   };
 
   const msgToSend: AnyMessageContent = {

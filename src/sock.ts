@@ -7,6 +7,7 @@ import makeWASocket, {
 import MAIN_LOGGER from "./MAIN_LOGGER";
 import { upsertMessages } from "./events/messages/upsert";
 import { updateConnection } from "./events/connection/update";
+import { Sock } from "./types";
 
 const logger = undefined;
 // const logger = MAIN_LOGGER.child({});
@@ -29,7 +30,7 @@ setInterval(() => {
 }, 10_000);
 
 // start a connection
-export const startSock = async () => {
+export const startSock = async (): Promise<Sock> => {
   const { state, saveCreds } = await useMultiFileAuthState("baileys_auth_info");
   // fetch latest version of WA Web
   const { version, isLatest } = await fetchLatestBaileysVersion();
